@@ -88,9 +88,9 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 				fmt.Println("Currently running on auto mode, please use \"cancel\" command switch to managed mode firstly")
 			} else {
 				writeCommand(serialCom, wrapCommand("50"))
-				time.Sleep(800 * time.Millisecond)
+				time.Sleep(600 * time.Millisecond)
 				exitCh <- true
-				os.Exit(0)
+				time.Sleep(200 * time.Millisecond) // 2019.05.25 方便main退出。如果不加，该函数还会再run一轮
 			}
 		} else if strings.Contains("auto", lowerCommand) {
 			if *modeFlag {
@@ -125,6 +125,7 @@ func main() {
 	var reader = bufio.NewReaderSize(os.Stdin, 16)
 	var conf = &serial.Config{Name: *port, Baud: 9600, ReadTimeout: 3 * time.Second, Size: 8}
 	com, err := serial.OpenPort(conf)
+	// defer fmt.Println("Happy") // for test
 	defer close(exitCh)
 	defer close(switcher)
 	defer com.Close()
