@@ -88,9 +88,9 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 				fmt.Println("Currently running on auto mode, please use \"cancel\" command switch to managed mode firstly")
 			} else {
 				writeCommand(serialCom, wrapCommand("50"))
-				time.Sleep(600 * time.Millisecond)
+				time.Sleep(500 * time.Millisecond)
 				exitCh <- true
-				time.Sleep(200 * time.Millisecond) // 2019.05.25 方便main退出。如果不加，该函数还会再run一轮
+				time.Sleep(100 * time.Millisecond) // 2019.05.25 方便main退出。如果不加，该函数还会再run一轮
 			}
 		} else if strings.Contains("auto", lowerCommand) {
 			if *modeFlag {
@@ -108,11 +108,16 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 			} else {
 				fmt.Println("Running on managed mode already")
 			}
-		} else if _, err := strconv.ParseInt(lowerCommand, 10, 8); err == nil {
+		} else if digitValue, err := strconv.ParseInt(lowerCommand, 10, 8); err == nil {
 			if *modeFlag {
 				fmt.Println("Currently running on auto mode ...")
 			} else {
-				writeCommand(serialCom, wrapCommand(lowerCommand))
+				if 0 <= digitValue && digitValue <= 100 {
+					// 尽管在把字符串解析为数值的时候，对可能的数值做了限制，但是仍有接收到101 ~ 127的可能
+					writeCommand(serialCom, wrapCommand(lowerCommand))
+				} else {
+					fmt.Printf("[WARNING] Valid input in range: 0 ~ 100, received: %s\n", lowerCommand)
+				}
 			}
 		} else {
 			fmt.Println("Invalid command !")
