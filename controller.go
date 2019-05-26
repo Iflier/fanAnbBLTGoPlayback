@@ -41,12 +41,14 @@ func adjustSpeed() int {
 	return int(math.Max(40.0-0.8*utilization, 5))
 }
 
-func writeCommand(serialCom *serial.Port, command string) {
+func writeCommand(serialCom *serial.Port, command string) error {
 	writtenNum, err := serialCom.Write([]byte(command))
 	if err != nil {
-		log.Fatalf("[ERROR] An error occurred when write coammand to device: %s", err)
+		fmt.Printf("[ERROR] An error occurred when write coammand to device: %s", err)
+		return err
 	}
 	fmt.Printf("[INFO] Written %d bytes\n", writtenNum)
+	return nil
 }
 
 func wrapCommand(commandStr string) string {
@@ -79,7 +81,8 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 		fmt.Print("Command -->:")
 		command, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatalln("[ERROR] An error occurred when read string from console !")
+			fmt.Println("[ERROR] An error occurred when read string from console !")
+			break
 		}
 		fmt.Printf("Received command: %s", command)
 		lowerCommand := strings.ToLower(strings.Trim(command, "\r\n.( )"))
@@ -87,7 +90,10 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 			if *modeFlag {
 				fmt.Println("Currently running on auto mode, please use \"cancel\" command switch to managed mode firstly")
 			} else {
-				writeCommand(serialCom, wrapCommand("50"))
+				err := writeCommand(serialCom, wrapCommand("50"))
+				if err != nil {
+					break
+				}
 				time.Sleep(500 * time.Millisecond)
 				exitCh <- true
 				time.Sleep(100 * time.Millisecond) // 2019.05.25 方便main退出。如果不加，该函数还会再run一轮
@@ -114,7 +120,10 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 			} else {
 				if 0 <= digitValue && digitValue <= 100 {
 					// 尽管在把字符串解析为数值的时候，对可能的数值做了限制，但是仍有接收到101 ~ 127的可能
-					writeCommand(serialCom, wrapCommand(lowerCommand))
+					err := writeCommand(serialCom, wrapCommand(lowerCommand))
+					if err != nil {
+						break
+					}
 				} else {
 					fmt.Printf("[WARNING] Valid input in range: 0 ~ 100, received: %s\n", lowerCommand)
 				}
