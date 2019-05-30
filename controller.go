@@ -86,7 +86,7 @@ func managedMode(serialCom *serial.Port, reader *bufio.Reader) {
 		}
 		fmt.Printf("Received command: %s", command)
 		lowerCommand := strings.ToLower(strings.Trim(command, "\r\n.( )"))
-		if len(lowerCommand) > 0 {
+		if lowerCommand != "" {
 			if strings.Contains("exitquit", lowerCommand) {
 				if *modeFlag {
 					fmt.Println("Currently running on auto mode, please use \"cancel\" command switch to managed mode firstly")
