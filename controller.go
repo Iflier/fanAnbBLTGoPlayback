@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -16,29 +17,28 @@ import (
 	"github.com/tarm/serial"
 )
 
-const sleepDuration = 600
-
 var modeFlag = new(bool)
 var switcher = make(chan bool)
 var exitCh = make(chan bool)
 var strBuilder = new(strings.Builder)
 var port = flag.String("port", "COM6", "Specify serial port")
+var interval = flag.Float64("interval", 1.0, "Specify a calculation interval")
 
 func platformInfo() {
-	var platform, family, version, _ = host.PlatformInformation()
-	fmt.Printf("Platform: %s, Family: %s, Version: %s\n", platform, family, version)
+	var structInfo, _ = host.Info()
+	fmt.Printf("OS: %s, Platform: %s, Arch: %s, OS Version: %s, Go Version: %s\n", structInfo.OS, structInfo.Platform, structInfo.KernelArch, structInfo.PlatformVersion, runtime.Version())
 }
 
 func adjustSpeed() int {
 	// 计算每个cpu核心利用率，duty = max(40 - 0.8 * utilization, 5)
 	var utilization float64
 	cpuNum, _ := cpu.Counts(true)
-	utilizationSlice, _ := cpu.Percent(time.Millisecond*sleepDuration, true)
+	utilizationSlice, _ := cpu.Percent(time.Duration(*interval)*time.Second, true)
 	for _, value := range utilizationSlice {
 		utilization += (value)
 	}
 	utilization = math.Min(100, math.Max(0, math.Ceil(utilization/float64(cpuNum))))
-	return int(math.Max(40.0-0.8*utilization, 5))
+	return int(math.Max(50.0-0.8*utilization, 5))
 }
 
 func writeCommand(serialCom *serial.Port, command string) error {
@@ -68,7 +68,6 @@ func autoMode(serialCom *serial.Port) {
 			if err != nil {
 				log.Fatalf("[ERROR] An error occurred when write coammand to device: %s", err)
 			}
-			time.Sleep(1 * time.Second)
 		} else {
 			// 阻塞，等待运行时机
 			<-switcher
